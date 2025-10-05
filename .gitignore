@@ -1,10 +1,9 @@
-.cache/
-.hw/
-.ip_user_files/
-.sim/
-.runs/
-.gen/
-.webtalk/
+ALD_Project.cache/
+ALD_Project.hw/
+ALD_Project.ip_user_files/
+ALD_Project.sim/
+ALD_Project.runs/
+ALD_Project.gen/
 .xpr/
 .sdk/
 *.jou
