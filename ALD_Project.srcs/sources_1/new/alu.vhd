@@ -21,30 +21,39 @@ architecture rtl of alu is
   constant ALU_SUB                : std_logic_vector(2 downto 0) := "101";
   constant ALU_LESS_THAN_SIGNED   : std_logic_vector(2 downto 0) := "110";
   constant ALU_LESS_THAN_UNSIGNED : std_logic_vector(2 downto 0) := "111";
+  
 begin
   process(a, b, op)
     variable tmp : std_logic_vector(XLEN-1 downto 0);
   begin
     case op is
       when ALU_OR   => tmp := a or b;
+
       when ALU_AND  => tmp := a and b;
+
       when ALU_XOR  => tmp := a xor b;
+
       when ALU_ADD  => tmp := std_logic_vector(signed(a) + signed(b));
+
       when ALU_SUB  => tmp := std_logic_vector(signed(a) - signed(b));
+
       when ALU_LESS_THAN_SIGNED =>
         if signed(a) < signed(b) then
           tmp := (others => '0'); tmp(0) := '1';
         else
           tmp := (others => '0');
         end if;
+
       when ALU_LESS_THAN_UNSIGNED =>
         if unsigned(a) < unsigned(b) then
           tmp := (others => '0'); tmp(0) := '1';
         else
           tmp := (others => '0');
         end if;
+
       when others => tmp := (others => '0');
     end case;
+
     result <= tmp;
     zero   <= '1' when tmp = (others => '0') else '0';
   end process;
