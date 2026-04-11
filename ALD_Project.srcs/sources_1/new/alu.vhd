@@ -6,13 +6,14 @@ entity alu is
   generic (XLEN : integer := 32);
   port (
     a, b     : in  std_logic_vector(XLEN-1 downto 0);
-    op     : in  std_logic_vector(2 downto 0);
+    op       : in  std_logic_vector(2 downto 0);
     result   : out std_logic_vector(XLEN-1 downto 0);
     zero     : out std_logic
   );
 end entity;
 
 architecture rtl of alu is
+  constant const_zero             : std_logic_vector(31 downto 0) := (others => '0');
   constant ALU_OR                 : std_logic_vector(2 downto 0) := "000";
   constant ALU_AND                : std_logic_vector(2 downto 0) := "001";
   constant ALU_XOR                : std_logic_vector(2 downto 0) := "010";
@@ -55,6 +56,10 @@ begin
     end case;
 
     result <= tmp;
-    zero   <= '1' when tmp = (others => '0') else '0';
+    if tmp = const_zero then
+        zero   <= '1';
+    else 
+        zero <= '0';
+    end if;
   end process;
 end architecture;

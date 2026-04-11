@@ -5,8 +5,8 @@ use ieee.numeric_std.all;
 
 entity id_stage is
     port(
-        rst         :       in std_logic;
-        minimize_size          : in  STD_LOGIC;
+         rst                    : in std_logic;
+         minimize_size          : in  STD_LOGIC;
          instr                  : in  STD_LOGIC_VECTOR(31 downto 0);
          out_immed              : out STD_LOGIC_VECTOR(31 downto 0) := (others => '0');         
 
@@ -23,7 +23,7 @@ entity id_stage is
          out_pc_branch_offset   : out STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
          out_loadstore_offset   : out STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
 
-         out_bus_write          : out STD_LOGIC;
+         out_bus_write          : out STD_LOGIC_VECTOR(0 downto 0);
          out_bus_enable         : out STD_LOGIC;
          out_bus_width          : out STD_LOGIC_VECTOR(1 downto 0);
 
@@ -156,7 +156,7 @@ instr_decode: process(opcode, rd, func3, func7, immed_I, immed_S, immed_B, immed
          out_result_src       <= RESULT_ALU;         
          out_rdest            <= "00000";  -- By default write to register zero (which stays zero)
          out_bus_width        <= func3(1 downto 0);
-         out_bus_write        <= '0';
+         out_bus_write        <= "0";
          out_bus_enable       <= '0';
          out_sign_ex_width    <= SIGN_EX_WIDTH_W;
          out_sign_ex_mode     <= SIGN_EX_UNSIGNED;
@@ -314,7 +314,7 @@ instr_decode: process(opcode, rd, func3, func7, immed_I, immed_S, immed_B, immed
                    when "000"  =>
                       ------------ SB ------------------
                       out_bus_width           <= "00";
-                      out_bus_write           <= '1';
+                      out_bus_write           <= "1";
                       out_bus_enable          <= '1';
 
                       if minimize_size = '1' then
@@ -327,7 +327,7 @@ instr_decode: process(opcode, rd, func3, func7, immed_I, immed_S, immed_B, immed
                    when "001"  =>
                       ------------ SH ------------------
                       out_bus_width           <= "01";
-                      out_bus_write           <= '1';
+                      out_bus_write           <= "1";
                       out_bus_enable          <= '1';
 
                       if minimize_size = '1' then
@@ -340,7 +340,7 @@ instr_decode: process(opcode, rd, func3, func7, immed_I, immed_S, immed_B, immed
                    when "010"  =>
                       ------------ SW ------------------
                       out_bus_width           <= "10";
-                      out_bus_write           <= '1';
+                      out_bus_write           <= "1";
                       out_bus_enable          <= '1';
 
                       if minimize_size = '1' then
@@ -497,7 +497,7 @@ instr_decode: process(opcode, rd, func3, func7, immed_I, immed_S, immed_B, immed
             when others =>
               -- Undecoded for opcodes                      
          end case;
-         if rst = '1' then
+         if rst = '0' then
             out_pc_mode             <= PC_RESET_STATE;
             out_branch_test_mode    <= BRANCH_TEST_TRUE;
          end if;

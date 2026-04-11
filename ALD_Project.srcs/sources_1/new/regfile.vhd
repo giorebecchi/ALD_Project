@@ -6,6 +6,7 @@ use ieee.numeric_std.all;
 entity regfile is
 port(
     clk         :       in std_logic;
+    tick_1hz    :       in std_logic;
     rst         :       in std_logic; 
     rw_select   :       in std_logic;  
     data        :       in std_logic_vector(31 downto 0);
@@ -25,19 +26,18 @@ begin
 process(clk)
 variable selected_reg : integer;
 begin
-if rising_edge(clk) then
-   if rst = '0' then
-      regs <= (others => (others => '0'));
-   else
-       if rw_select = '1' then
-             selected_reg := to_integer(unsigned(write_select));
-             
-          if selected_reg /= 0 then
+    if rising_edge(clk) then
+        if rst = '0' then                          -- reset checked first, unconditionally
+            regs <= (others => (others => '0'));
+        elsif tick_1hz = '1' then                  -- normal operation only when ticking
+            if rw_select = '1' then
+                selected_reg := to_integer(unsigned(write_select));
+                if selected_reg /= 0 then
                     regs(selected_reg) <= data;
-          end if;
+                end if;
+            end if;
         end if;
-   end if;
-end if;
+    end if;
 end process;
 
 a_data <= regs(to_integer(unsigned(a_select)));

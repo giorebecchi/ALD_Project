@@ -21,15 +21,54 @@ begin
   process(a_s, b_s, a_u, b_u, funct3)
     variable c : std_logic;
   begin
-    case funct3 is
-      when "000" => c := '1' when a_u = b_u else '0';  -- BEQ
-      when "001" => c := '1' when a_u /= b_u else '0'; -- BNE
-      when "100" => c := '1' when a_s < b_s else '0';  -- BLT
-      when "101" => c := '1' when a_s >= b_s else '0'; -- BGE
-      when "110" => c := '1' when a_u < b_u else '0';  -- BLTU
-      when "111" => c := '1' when a_u >= b_u else '0'; -- BGEU
-      when others => c := '0';                         -- non-branch 
-    end case;
-    cond <= c;
+   case funct3 is
+    when "000" =>  -- BEQ
+        if a_u = b_u then
+            c := '1';
+        else
+            c := '0';
+        end if;
+
+    when "001" =>  -- BNE
+        if a_u /= b_u then
+            c := '1';
+        else
+            c := '0';
+        end if;
+
+    when "100" =>  -- BLT
+        if a_s < b_s then
+            c := '1';
+        else
+            c := '0';
+        end if;
+
+    when "101" =>  -- BGE
+        if a_s >= b_s then
+            c := '1';
+        else
+            c := '0';
+        end if;
+
+    when "110" =>  -- BLTU
+        if a_u < b_u then
+            c := '1';
+        else
+            c := '0';
+        end if;
+
+    when "111" =>  -- BGEU
+        if a_u >= b_u then
+            c := '1';
+        else
+            c := '0';
+        end if;
+
+    when others =>
+        c := '0';
+end case;
+
+cond <= c;
+
   end process;
 end architecture;
