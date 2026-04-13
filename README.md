@@ -102,7 +102,7 @@ Features:
 - 32 registers, 32-bit each
 - asynchronous read ports
 - synchronous write (enabled only on `tick_1hz`)
-- register `x0` is hardwired to zero (writes are ignored)
+- register `x0` always reads as zero
 
 
 ### Decode and Control Unit
@@ -122,12 +122,20 @@ This block is central to the design and handles:
 ### ALU
 Implemented in `alu.vhd`.
 
-Supported operations:
-- `ADD`, `SUB`
-- `AND`, `OR`, `XOR`
-- `SLT`, `SLTU`
+The ALU is a combinational unit with two operands (`a`, `b`), a 3-bit operation selector (`op`), and two outputs:
+- `result`
+- `zero`
 
-The ALU operates on operands selected by the execute-stage multiplexer.
+Supported operations:
+- `ADD`
+- `SUB`
+- `AND`
+- `OR`
+- `XOR`
+- signed set-less-than (`SLT`)
+- unsigned set-less-than (`SLTU`)
+
+Operand selection is handled separately in the execute stage through `ex_operand_mux.vhd`.
 
 ### Operand Selection (Execute Mux)
 Implemented in `ex_operand_mux.vhd`.
