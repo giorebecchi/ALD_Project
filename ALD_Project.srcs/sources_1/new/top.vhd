@@ -69,6 +69,7 @@ architecture rtl of top is
   signal out_alu_dest_reg     : std_logic_vector(4 downto 0);
   signal out_branch_target    : std_logic_vector(31 downto 0);
   signal out_branch_taken     : std_logic;
+  signal out_alu_loadstore_off: std_logic_vector(31 downto 0);
 
   -- Regfile signals
   signal a_data, b_data : std_logic_vector(31 downto 0);
@@ -76,6 +77,8 @@ architecture rtl of top is
   signal slow_clk : std_logic := '0';
   signal counter   : integer := 0;
   signal rst : std_logic := '0';
+  
+  signal alu_loadstore_offset  : std_logic_vector(31 downto 0);
   -- PIPE REGS signals (outputs)
   signal pipe_pc_out, pipe_instr_out : std_logic_vector(31 downto 0);
   signal pipe_pc_ex_in : std_logic_vector(31 downto 0);
@@ -94,6 +97,7 @@ architecture rtl of top is
   signal pipe_bus_width : std_logic_vector(1 downto 0);
   signal pipe_branch_test_enable : std_logic;
   signal pipe_branch_test_mode : std_logic_vector(2 downto 0);
+
   
   signal pipe_alu_result : std_logic_vector(31 downto 0);
   signal pipe_pc_4 : std_logic_vector(31 downto 0);
@@ -108,6 +112,7 @@ architecture rtl of top is
   signal pipe_branch_taken : std_logic;
   
   signal pipe_mem_wb_rd_addr : std_logic_vector(4 downto 0);
+  signal pipe_mem_loadstore_off : std_logic_vector(31 downto 0);
   signal pipe_mem_wb_reg_write : std_logic;
   signal pipe_mem_wb_mem_to_reg : std_logic;
   signal pipe_mem_wb_alu_result : std_logic_vector(31 downto 0);
@@ -268,6 +273,7 @@ begin
         out_bus_width => pipe_bus_width,
         alu_result => out_alu_result,
         pc => out_pc_4,
+        loadstore_offset => pipe_loadstore_offset,
         result_src_out => out_alu_result_src,
         b_register_value_out => out_register_b,
         out_bus_write_out => out_alu_bus_write,
@@ -275,6 +281,7 @@ begin
         out_bus_width_out => out_alu_bus_width,
         out_alu_dest_reg => out_alu_dest_reg,
         branch_target => out_branch_target,
+        out_loadstore_offset => out_alu_loadstore_off,
         branch_taken => out_branch_taken 
      ); 
     u_piperegs: entity work.pipe_regs
@@ -324,6 +331,7 @@ begin
       alu_dest_reg => out_alu_dest_reg,
       branch_target => out_branch_target,
       branch_taken => out_branch_taken, 
+      alu_loadstore_off => out_alu_loadstore_off,
       
       mem_wb_rd_addr => mem_wb_rd_addr,
       mem_wb_reg_write => mem_wb_reg_write,
@@ -336,6 +344,7 @@ begin
       pc_out => pipe_pc_out,
       pc_ex_in => pipe_pc_ex_in,
       instr_out => pipe_instr_out,
+      mem_loadstore_off => pipe_mem_loadstore_off,
 
       rs1_val_out => pipe_rs1_val,
       rs2_val_out => pipe_rs2_val,
@@ -388,6 +397,7 @@ begin
         rst => rst_sync,
         
         alu_result => pipe_alu_result,
+        loadstore_offset => pipe_mem_loadstore_off,
         b_register_val => pipe_register_b,
         rd_addr => pipe_alu_dest_reg,
         mem_read => pipe_alu_bus_enable,
@@ -436,7 +446,7 @@ begin
 
         in_alu_result     => mem_wb_alu_result,
         in_shift_result   => mem_wb_shift_result,
-        in_mem_result     => mem_wb_load_data,
+        in_mem_result     => dmem_read_data,
         in_pc_plus_4      => mem_wb_pc_plus_4,
 
         out_write_enable  => wb_write_enable,

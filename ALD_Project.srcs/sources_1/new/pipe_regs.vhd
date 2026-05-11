@@ -82,6 +82,7 @@ port(
     alu_dest_reg        :       in std_logic_vector(4 downto 0);
     branch_target       :       in std_logic_vector(31 downto 0);
     branch_taken        :       in std_logic;
+    alu_loadstore_off   :       in std_logic_vector(31 downto 0);
     
  --MEMORY STAGE DATA
     mem_wb_rd_addr      :       in std_logic_vector(4 downto 0);
@@ -139,6 +140,7 @@ port(
         mem_wb_reg_write_out    :       out std_logic;
         mem_wb_mem_to_reg_out   :       out std_logic;
         mem_wb_alu_result_out   :       out std_logic_vector(31 downto 0);
+        mem_loadstore_off       :       out std_logic_vector(31 downto 0);
         
         mem_wb_load_data_out    :       out std_logic_vector(31 downto 0)
        
@@ -162,6 +164,7 @@ process(clk, rst)
             rd_out              <= (others => '0');
             rs1_out             <= (others => '0');
             rs2_out             <= (others => '0');
+            mem_loadstore_off   <= (others => '0');
 
             alu_op_out          <= (others => '0');
             alu_src_out         <= (others => '0');
@@ -244,6 +247,7 @@ process(clk, rst)
             mem_wb_mem_to_reg_out <= mem_wb_mem_to_reg;
             mem_wb_alu_result_out <= mem_wb_alu_result;
             mem_wb_load_data_out <= mem_wb_load_data;
+            mem_loadstore_off <= alu_loadstore_off;
         end if;
       end if;
     end process;

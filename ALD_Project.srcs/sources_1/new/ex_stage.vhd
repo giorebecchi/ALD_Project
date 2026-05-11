@@ -7,6 +7,7 @@ entity ex_stage is
   port (
     pc_in, rs1_in, rs2_in, imm_in : in  std_logic_vector(XLEN-1 downto 0);
     pc_mode : in std_logic_vector(1 downto 0);
+    loadstore_offset : in std_logic_vector(31 downto 0);
     pc_jump_offset_in   : in std_logic_vector(XLEN-1 downto 0);
     pc_branch_offset_in : in std_logic_vector(XLEN-1 downto 0);
     in_alu_dest_reg : in std_logic_vector(4 downto 0);
@@ -27,6 +28,7 @@ entity ex_stage is
     out_bus_width_out : out std_logic_vector (1 downto 0);
     out_alu_dest_reg : out std_logic_vector(4 downto 0);
     branch_target : out std_logic_vector(XLEN-1 downto 0);
+    out_loadstore_offset: out std_logic_vector(31 downto 0);
     branch_taken : out std_logic
   );
 end entity;
@@ -98,6 +100,7 @@ begin
 end process;
   
   pc <= std_logic_vector(unsigned(pc_in) + 4);
+  out_loadstore_offset <= std_logic_vector(signed(rs1_in) + signed(loadstore_offset));
 
   -- Branch taken?
   result_src_out <= result_src;
