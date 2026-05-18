@@ -1,0 +1,5 @@
+vhdl xil_defaultlib  \
+"../../../../ALD_Project.gen/sources_1/ip/dmem/dmem_sim_netlist.vhdl" \
+
+# Do not sort compile order
+nosort
