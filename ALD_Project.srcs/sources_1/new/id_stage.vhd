@@ -6,7 +6,6 @@ use ieee.numeric_std.all;
 entity id_stage is
     port(
          rst                    : in std_logic;
-         minimize_size          : in  STD_LOGIC;
          instr                  : in  STD_LOGIC_VECTOR(31 downto 0);
          out_immed              : out STD_LOGIC_VECTOR(31 downto 0) := (others => '0');         
 
@@ -238,12 +237,6 @@ instr_decode: process(opcode, rd, func3, func7, immed_I, immed_S, immed_B, immed
                       out_bus_enable          <= '1';
                       out_sign_ex_width       <= SIGN_EX_WIDTH_B;
                       out_sign_ex_mode        <= SIGN_EX_SIGNED;
-
-                      if minimize_size = '1' then
-                          out_select_b            <= B_BUS_IMMEDIATE;
-                          out_alu_mode            <= ALU_ADD;
-                      end if;
-
                       out_rdest               <= rd;
                       out_result_src          <= RESULT_MEMORY;
                    when "001"  =>
@@ -253,12 +246,6 @@ instr_decode: process(opcode, rd, func3, func7, immed_I, immed_S, immed_B, immed
                       out_bus_enable          <= '1';
                       out_sign_ex_width       <= SIGN_EX_WIDTH_H;
                       out_sign_ex_mode        <= SIGN_EX_SIGNED;
-
-                      if minimize_size = '1' then
-                          out_select_b            <= B_BUS_IMMEDIATE;
-                          out_alu_mode            <= ALU_ADD;
-                      end if;
-
                       out_rdest               <= rd;
                       out_result_src          <= RESULT_MEMORY;
                    when "010"  =>
@@ -268,12 +255,6 @@ instr_decode: process(opcode, rd, func3, func7, immed_I, immed_S, immed_B, immed
                       out_bus_enable          <= '1';
                       out_sign_ex_width       <= SIGN_EX_WIDTH_W;
                       out_sign_ex_mode        <= SIGN_EX_SIGNED;
-
-                      if minimize_size = '1' then
-                          out_select_b            <= B_BUS_IMMEDIATE;
-                          out_alu_mode            <= ALU_ADD;
-                      end if;
-
                       out_rdest               <= rd;
                       out_result_src          <= RESULT_MEMORY;
                    when "100"  =>
@@ -283,12 +264,6 @@ instr_decode: process(opcode, rd, func3, func7, immed_I, immed_S, immed_B, immed
                       out_bus_enable          <= '1';
                       out_sign_ex_width       <= SIGN_EX_WIDTH_B;
                       out_sign_ex_mode        <= SIGN_EX_UNSIGNED;
-
-                      if minimize_size = '1' then
-                          out_select_b            <= B_BUS_IMMEDIATE;
-                          out_alu_mode            <= ALU_ADD;
-                      end if;
-
                       out_rdest               <= rd;
                       out_result_src          <= RESULT_MEMORY;
                    when "101"  =>
@@ -298,12 +273,6 @@ instr_decode: process(opcode, rd, func3, func7, immed_I, immed_S, immed_B, immed
                       out_bus_enable          <= '1';
                       out_sign_ex_width       <= SIGN_EX_WIDTH_H;
                       out_sign_ex_mode        <= SIGN_EX_UNSIGNED;
-
-                      if minimize_size = '1' then
-                          out_select_b            <= B_BUS_IMMEDIATE;
-                          out_alu_mode            <= ALU_ADD;
-                      end if;
-
                       out_rdest               <= rd;
                       out_result_src          <= RESULT_MEMORY;
                    when others  =>  NULL;
@@ -316,39 +285,18 @@ instr_decode: process(opcode, rd, func3, func7, immed_I, immed_S, immed_B, immed
                       out_bus_width           <= "00";
                       out_bus_write           <= "1";
                       out_bus_enable          <= '1';
-
-                      if minimize_size = '1' then
-                         -- Immedidate needs to be the store address
-                         out_select_b            <= B_BUS_IMMEDIATE;
-                         out_immed               <= immed_S;
-                      end if;
-
                       out_rdest               <= (others => '0');
                    when "001"  =>
                       ------------ SH ------------------
                       out_bus_width           <= "01";
                       out_bus_write           <= "1";
                       out_bus_enable          <= '1';
-
-                      if minimize_size = '1' then
-                         -- Immedidate needs to be the store address
-                         out_select_b            <= B_BUS_IMMEDIATE;
-                         out_immed               <= immed_S;
-                      end if;
-
                       out_rdest               <= (others => '0');
                    when "010"  =>
                       ------------ SW ------------------
                       out_bus_width           <= "10";
                       out_bus_write           <= "1";
                       out_bus_enable          <= '1';
-
-                      if minimize_size = '1' then
-                         -- Immedidate needs to be the store address
-                         out_select_b            <= B_BUS_IMMEDIATE;
-                         out_immed               <= immed_S;
-                      end if;
-
                       out_rdest               <= (others => '0');
                    when others  =>  NULL;
                       -- Undecoded for opcode 0100011                      

@@ -212,7 +212,6 @@ begin
   u_id: entity work.id_stage
     port map (
       rst               => rst_sync,
-      minimize_size     => '0',  -- or a test input
       instr             => imem_dout,
       out_immed         => out_immed,
       out_reg_a         => out_reg_a,
@@ -446,7 +445,7 @@ begin
 
         in_alu_result     => mem_wb_alu_result,
         in_shift_result   => mem_wb_shift_result,
-        in_mem_result     => dmem_read_data,
+        in_mem_result     => mem_wb_load_data,
         in_pc_plus_4      => mem_wb_pc_plus_4,
 
         out_write_enable  => wb_write_enable,

@@ -4,17 +4,16 @@ use IEEE.NUMERIC_STD.ALL;
 
 entity seven_segment_display is
     Port (
-        clk      : in  STD_LOGIC;                      -- 100 MHz clock
-        number   : in  STD_LOGIC_VECTOR(31 downto 0);  -- 32-bit SIGNED input (two's complement)
-        segments : out STD_LOGIC_VECTOR(6 downto 0);   -- Segments a-g (active low)
-        anodes   : out STD_LOGIC_VECTOR(7 downto 0)    -- AN7-AN0 (active low)
+        clk      : in  STD_LOGIC;                      
+        number   : in  STD_LOGIC_VECTOR(31 downto 0);  
+        segments : out STD_LOGIC_VECTOR(6 downto 0);   
+        anodes   : out STD_LOGIC_VECTOR(7 downto 0)   
     );
 end seven_segment_display;
 
 architecture Behavioral of seven_segment_display is
-    -- Special digit codes (5 bits so we can carry symbols beyond 0-9)
-    constant DIG_MINUS : unsigned(4 downto 0) := "10000";  -- 16
-    constant DIG_BLANK : unsigned(4 downto 0) := "11111";  -- 31
+    constant DIG_MINUS : unsigned(4 downto 0) := "10000";  
+    constant DIG_BLANK : unsigned(4 downto 0) := "11111";  
 
     signal digit_select  : unsigned(2 downto 0) := (others => '0');
     type   digit_array is array (7 downto 0) of unsigned(4 downto 0);
@@ -22,7 +21,6 @@ architecture Behavioral of seven_segment_display is
     signal current_digit : unsigned(4 downto 0);
     signal counter       : unsigned(15 downto 0) := (others => '0');
 begin
-    -- Multiplexing tick
     process(clk)
     begin
         if rising_edge(clk) then
@@ -33,19 +31,17 @@ begin
         end if;
     end process;
 
-    -- Convert signed input into per-digit codes (with sign + leading-zero blanking)
     process(number)
         variable num     : integer;
         variable abs_num : integer;
         variable tmp     : integer;
         variable d       : integer range 0 to 9;
         variable is_neg  : boolean;
-        variable msd_pos : integer range 0 to 7;  -- position of most significant digit
+        variable msd_pos : integer range 0 to 7; 
     begin
         num    := to_integer(signed(number));
         is_neg := (num < 0);
 
-        -- Saturation: 8 digits for positive, 7 digits + sign for negative
         if is_neg then
             if num < -9999999 then
                 abs_num := 9999999;
@@ -60,7 +56,6 @@ begin
             end if;
         end if;
 
-        -- Decompose into decimal digits and track most significant non-zero digit
         tmp     := abs_num;
         msd_pos := 0;
         for i in 0 to 7 loop
@@ -72,8 +67,6 @@ begin
             tmp := tmp / 10;
         end loop;
 
-        -- Blank leading zeros; insert minus sign just left of MSD if negative.
-        -- (Last assignment in a process wins, so this overrides the loop above.)
         for i in 0 to 7 loop
             if i > msd_pos then
                 if is_neg and i = msd_pos + 1 then
@@ -85,22 +78,20 @@ begin
         end loop;
     end process;
 
-    -- Anode multiplexing
     process(digit_select)
     begin
         case digit_select is
-            when "000"  => anodes <= "11111110"; -- Digit 0 (rightmost)
+            when "000"  => anodes <= "11111110"; 
             when "001"  => anodes <= "11111101";
             when "010"  => anodes <= "11111011";
             when "011"  => anodes <= "11110111";
             when "100"  => anodes <= "11101111";
             when "101"  => anodes <= "11011111";
             when "110"  => anodes <= "10111111";
-            when others => anodes <= "01111111"; -- Digit 7 (leftmost)
+            when others => anodes <= "01111111";
         end case;
     end process;
 
-    -- Digit selection
     process(digit_select, digits)
     begin
         case digit_select is
@@ -115,7 +106,6 @@ begin
         end case;
     end process;
 
-    -- Segment decoder (segments(6 downto 0) = g,f,e,d,c,b,a, active low)
     process(current_digit)
     begin
         case to_integer(current_digit) is
@@ -129,7 +119,7 @@ begin
             when 7      => segments <= "1111000"; -- 7
             when 8      => segments <= "0000000"; -- 8
             when 9      => segments <= "0010000"; -- 9
-            when 16     => segments <= "0111111"; -- minus sign (only g on)
+            when 16     => segments <= "0111111"; -- minus sign 
             when others => segments <= "1111111"; -- blank
         end case;
     end process;

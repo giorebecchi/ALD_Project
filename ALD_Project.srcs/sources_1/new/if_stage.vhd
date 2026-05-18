@@ -57,7 +57,6 @@ begin
   imem_addr <= pc_reg(15 downto 2);
 
 
-  -- Sequential
  
   process(clk)
 begin
