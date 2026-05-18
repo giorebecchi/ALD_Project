@@ -238,7 +238,6 @@ This makes the project suitable for direct FPGA demonstration and debugging.
 | `alu.vhd`                  | Arithmetic Logic Unit                |
 | `branch_comp.vhd`          | Branch comparator                    |
 | `ex_operand_mux.vhd`       | Execute operand selection            |
-| `immgen.vhd`               | Immediate generator                  |
 | `clock_generator.vhd`      | Clock divider (1 Hz tick)            |
 | `debouncer.vhd`            | Button debouncer                     |
 | `seven_segment_display.vhd`| Seven-segment display driver         |
