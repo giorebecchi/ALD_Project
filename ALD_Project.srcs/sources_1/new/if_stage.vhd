@@ -13,30 +13,20 @@ entity if_stage is
     clk            : in  std_logic;
     tick_1hz       : in  std_logic;
     rst            : in  std_logic;                     
-
-    -- Hazard / Control
     stall_if       : in  std_logic;
     redirect_valid : in  std_logic;
     redirect_pc    : in  std_logic_vector(31 downto 0); 
-
-    -- IMEM interface (single-port ROM/RAM)
     imem_en        : out std_logic;                     
     imem_addr      : out std_logic_vector(13 downto 0); 
-
-    -- IF/ID pipeline outputs
     if_id_pc       : out std_logic_vector(31 downto 0);
-
-    -- Optional debug
     pc_out         : out std_logic_vector(31 downto 0)
   );
 end entity;
 
 architecture rtl of if_stage is
-  signal pc_reg     : std_logic_vector(31 downto 0) := (others => '0');
-  signal pc_d1      : std_logic_vector(31 downto 0) := (others => '0'); -- 1-cycle delayed PC
-  signal if_pc_q    : std_logic_vector(31 downto 0) := (others => '0');
+  signal pc_reg      : std_logic_vector(31 downto 0) := (others => '0');
+  signal if_pc_q     : std_logic_vector(31 downto 0) := (others => '0');
   signal imem_en_int : std_logic := '1';
-
 
   -- helpers
   function clr_lsb(x : std_logic_vector(31 downto 0)) return std_logic_vector is
@@ -47,43 +37,39 @@ architecture rtl of if_stage is
   end function;
 
   signal next_pc    : std_logic_vector(31 downto 0);
-  signal cap_en     : std_logic;  -- capture/advance enable (disabled during stall)
-  signal pc_word    : unsigned(31 downto 0);
 begin
-  
-  next_pc <= pc_reg;
 
-  cap_en <= '1' when (stall_if = '0') else '0';
+  -- Determines the upcoming PC based on flushes/redirects and stalls
+  process(pc_reg, redirect_valid, redirect_pc, stall_if)
+  begin
+    if redirect_valid = '1' then
+      next_pc <= clr_lsb(redirect_pc);                 
+    elsif stall_if = '1' then
+      next_pc <= pc_reg;                                 
+    else
+      next_pc <= std_logic_vector(unsigned(pc_reg) + 4); 
+    end if;
+  end process;
+
   imem_addr <= pc_reg(15 downto 2);
 
-
- 
   process(clk)
-begin
-  if rising_edge(clk) then
-    if rst = '0' then
-      pc_reg   <= BOOT_PC;
-      pc_d1    <= BOOT_PC;
-      if_pc_q  <= (others => '0');
-      imem_en_int <= '1';
-    else
-
-      if tick_1hz = '1' then
-        if redirect_valid = '1' then
-          pc_reg <= clr_lsb(redirect_pc);
-        else
-          pc_reg <= std_logic_vector(unsigned(pc_reg) + 4);
-        end if;
-
+  begin
+    if rising_edge(clk) then
+      if rst = '0' then
+        pc_reg      <= BOOT_PC;
+        if_pc_q     <= (others => '0');
+        imem_en_int <= '1';
+      else
+        if tick_1hz = '1' then
+          pc_reg <= next_pc;
         end if;
       end if;
-  end if;
-end process;
+    end if;
+  end process;
 
-
-  if_id_pc    <= pc_reg;
-  pc_out      <= pc_reg;
-  imem_en <= imem_en_int;
-
+  if_id_pc  <= pc_reg; 
+  pc_out    <= pc_reg;
+  imem_en   <= imem_en_int;
 
 end architecture;

@@ -9,14 +9,10 @@ port(
     tick_1hz    :       in std_logic;
     rst         :       in std_logic;
     
- ----------------------------------------------------------------------------------------------------------------------------------
  --INSTRUCTION FETCH DATA
     pc          :       in std_logic_vector(31 downto 0);
-    id_ex_pc    :       in std_logic_vector(31 downto 0);
     instr       :       in std_logic_vector(31 downto 0);
     
-    
- ----------------------------------------------------------------------------------------------------------------------------------
  --DECODER DATA
     
     --data signals
@@ -83,6 +79,8 @@ port(
     branch_target       :       in std_logic_vector(31 downto 0);
     branch_taken        :       in std_logic;
     alu_loadstore_off   :       in std_logic_vector(31 downto 0);
+    alu_sign_ex_mode    :       in std_logic_vector(0 downto 0);
+    alu_sign_ex_width   :       in std_logic_vector(1 downto 0);
     
  --MEMORY STAGE DATA
     mem_wb_rd_addr      :       in std_logic_vector(4 downto 0);
@@ -91,8 +89,7 @@ port(
     mem_wb_alu_result   :       in std_logic_vector(31 downto 0);
     mem_wb_load_data    :       in std_logic_vector(31 downto 0);
     
- ----------------------------------------------------------------------------------------------------------------------------------
-        -- OUTPUTS (registered pipeline signals)
+        -- OUTPUTS 
         pc_out          : out std_logic_vector(31 downto 0);
         instr_out       : out std_logic_vector(31 downto 0);
 
@@ -115,6 +112,8 @@ port(
         loadstore_offset_out: out std_logic_vector(31 downto 0);
         sign_ex_mode_out    : out std_logic_vector(0 downto 0);
         sign_ex_width_out   : out std_logic_vector(1 downto 0);
+        alu_sign_ex_mode_out: out std_logic_vector(0 downto 0);
+        alu_sign_ex_width_out: out std_logic_vector(1 downto 0);
 
         mem_write_out       : out std_logic_vector(0 downto 0);
         mem_en_out          : out std_logic;
@@ -125,7 +124,6 @@ port(
         
         
         alu_result_out          :       out std_logic_vector(31 downto 0);
-        pc_ex_in                :       out std_logic_vector(31 downto 0);
         pc_4_out                :       out std_logic_vector(31 downto 0);
         alu_result_src_out      :       out std_logic_vector(1 downto 0);
         b_register_out          :       out std_logic_vector(31 downto 0);
@@ -155,7 +153,6 @@ process(clk, rst)
         if rst = '0' then
             -- reset all pipeline outputs
             pc_out              <= (others => '0');
-            pc_ex_in            <= (others => '0');
             instr_out           <= (others => '1');
 
             rs1_val_out         <= (others => '0');
@@ -178,6 +175,8 @@ process(clk, rst)
             loadstore_offset_out<= (others => '0');
             sign_ex_mode_out    <= (others => '0');
             sign_ex_width_out   <= (others => '0');
+            alu_sign_ex_width_out<= (others => '0');
+            alu_sign_ex_mode_out<= (others => '0');
 
             mem_write_out       <= "0";
             mem_en_out          <= '0';
@@ -199,9 +198,7 @@ process(clk, rst)
 
         elsif rising_edge(clk) then
             if tick_1hz = '1' then
-            -- latch all inputs into pipeline registers
             pc_out              <= pc;
-            pc_ex_in            <= id_ex_pc;
             instr_out           <= instr;
 
             rs1_val_out         <= rs1_val;
@@ -223,6 +220,8 @@ process(clk, rst)
             loadstore_offset_out<= loadstore_offset;
             sign_ex_mode_out    <= sign_ex_mode;
             sign_ex_width_out   <= sign_ex_width;
+            alu_sign_ex_width_out <= alu_sign_ex_width;
+            alu_sign_ex_mode_out <= alu_sign_ex_mode;
 
             mem_write_out       <= mem_write;
             mem_en_out          <= mem_en;

@@ -29,6 +29,10 @@ entity ex_stage is
     out_alu_dest_reg : out std_logic_vector(4 downto 0);
     branch_target : out std_logic_vector(XLEN-1 downto 0);
     out_loadstore_offset: out std_logic_vector(31 downto 0);
+    alu_sign_ex_in: in std_logic_vector(0 downto 0);
+    alu_sign_width_in: in std_logic_vector(1 downto 0);
+    out_alu_sign_ex: out std_logic_vector(0 downto 0);
+    out_alu_sign_width: out std_logic_vector(1 downto 0);
     branch_taken : out std_logic
   );
 end entity;
@@ -99,7 +103,7 @@ begin
   end case;
 end process;
   
-  pc <= std_logic_vector(unsigned(pc_in) + 4);
+  pc <= pc_in;
   out_loadstore_offset <= std_logic_vector(signed(rs1_in) + signed(loadstore_offset));
 
   -- Branch taken?
@@ -109,6 +113,8 @@ end process;
   out_bus_enable_out <= out_bus_enable;
   out_bus_width_out <= out_bus_width;
   out_alu_dest_reg <= in_alu_dest_reg;
+  out_alu_sign_width <= alu_sign_width_in;
+  out_alu_sign_ex <= alu_sign_ex_in;
 
   alu_result <= alu_y;
 end architecture;

@@ -45,11 +45,7 @@ architecture rtl of wb_stage is
 
 begin
 
-    --------------------------------------------------------------------
-    -- Load sign/zero extension
-    -- Assumes the addressed byte/halfword is already aligned into the
-    -- low bits of in_mem_result by the memory stage / bus interface.
-    --------------------------------------------------------------------
+
     mem_extend: process(in_mem_result, in_sign_ex_mode, in_sign_ex_width)
     begin
         case in_sign_ex_width is
@@ -68,18 +64,13 @@ begin
                 end if;
 
             when SIGN_EX_WIDTH_W =>
-                -- full 32-bit word, no further change needed
                 mem_ext_result <= in_mem_result;
 
             when others =>
-                -- safe default
                 mem_ext_result <= in_mem_result;
         end case;
     end process;
 
-    --------------------------------------------------------------------
-    -- Select writeback source
-    --------------------------------------------------------------------
     result_mux: process(in_result_src, in_alu_result, in_shift_result, mem_ext_result, in_pc_plus_4)
     begin
         case in_result_src is
@@ -100,10 +91,6 @@ begin
         end case;
     end process;
 
-    --------------------------------------------------------------------
-    -- Register file write control
-    -- Writes to x0 are suppressed.
-    --------------------------------------------------------------------
     out_write_reg  <= in_rdest;
     out_write_data <= selected_result;
     out_write_enable <= '1' when in_rdest /= "00000" else '0';

@@ -21,15 +21,15 @@ end entity;
 
 architecture rtl of regfile is
 type reg_array_t is array (0 to 31) of std_logic_vector(31 downto 0);
-signal regs : reg_array_t := (others => (others => '0')); -- initialize to 0
+signal regs : reg_array_t := (others => (others => '0'));
 begin
 process(clk)
 variable selected_reg : integer;
 begin
     if rising_edge(clk) then
-        if rst = '0' then                          -- reset checked first, unconditionally
+        if rst = '0' then                          
             regs <= (others => (others => '0'));
-        elsif tick_1hz = '1' then                  -- normal operation only when ticking
+        elsif tick_1hz = '1' then               
             if rw_select = '1' then
                 selected_reg := to_integer(unsigned(write_select));
                 if selected_reg /= 0 then
@@ -40,8 +40,13 @@ begin
     end if;
 end process;
 
-a_data <= regs(to_integer(unsigned(a_select)));
-b_data <= regs(to_integer(unsigned(b_select)));
+a_data <= (others => '0') when a_select = "00000" else
+          data when (rw_select = '1' and write_select = a_select) else
+          regs(to_integer(unsigned(a_select)));
+
+b_data <= (others => '0') when b_select = "00000" else
+          data when (rw_select = '1' and write_select = b_select) else
+          regs(to_integer(unsigned(b_select)));
      
 
 

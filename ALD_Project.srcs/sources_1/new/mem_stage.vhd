@@ -14,7 +14,7 @@ entity mem_stage is
     rd_addr           : in  std_logic_vector(4 downto 0);
     mem_read          : in  std_logic;
     mem_write         : in  std_logic_vector(0 downto 0);
-    alu_src           : in  std_logic_vector(1 downto 0);   -- result_src
+    alu_src           : in  std_logic_vector(1 downto 0); 
     in_sign_ex_mode   : in  std_logic_vector(0 downto 0);
     in_pc_plus_4      : in  std_logic_vector(31 downto 0);
     in_mem_sign_width : in  std_logic_vector(1 downto 0);
@@ -42,8 +42,8 @@ end entity mem_stage;
 
 architecture rtl of mem_stage is
     signal is_store     : std_logic;
-    signal is_load_inst : std_logic;  -- result_src says "from memory"
-    signal will_write   : std_logic;  -- this instruction writes regfile
+    signal is_load_inst : std_logic; 
+    signal will_write   : std_logic; 
 begin
     is_store <= mem_write(0);
     is_load_inst <= '1' when alu_src = "10" else '0';
@@ -56,8 +56,7 @@ begin
     dmem_addr       <= loadstore_offset(13 downto 2);
     dmem_write_data <= b_register_val;
 
-    -- blk_mem_gen: wea only takes effect when ena='1'. Enable for both
-    -- loads and stores.
+
     dmem_read_en     <= mem_read or is_store;
     dmem_write_en(0) <= is_store;
 

@@ -10,7 +10,8 @@ entity top is
     CA, CB, CC, CD, CE, CF, CG : out STD_LOGIC;     
     DP        : out STD_LOGIC;                     
     AN        : out STD_LOGIC_VECTOR(7 downto 0);
-    LED       : out std_logic_vector(15 downto 0)
+    LED       : out std_logic_vector(15 downto 0);
+    UART_RXD_OUT   : out std_logic 
   );
 end entity;
 
@@ -29,6 +30,7 @@ architecture rtl of top is
   signal imem_dout    : std_logic_vector(31 downto 0);
 
   signal stall_if       : std_logic := '0';
+  signal stall_id       : std_logic := '0';
   signal redirect_valid : std_logic := '0';
   signal redirect_pc    : std_logic_vector(31 downto 0) := (others => '0');
 
@@ -56,6 +58,7 @@ architecture rtl of top is
   signal out_sign_ex_width    : std_logic_vector(1 downto 0);
   signal out_result_src       : std_logic_vector(1 downto 0);
   signal out_rdest            : std_logic_vector(4 downto 0);
+  signal id_ex_pc             : std_logic_vector(31 downto 0);
   
   --Alu outputs
   
@@ -70,16 +73,19 @@ architecture rtl of top is
   signal out_branch_target    : std_logic_vector(31 downto 0);
   signal out_branch_taken     : std_logic;
   signal out_alu_loadstore_off: std_logic_vector(31 downto 0);
+  signal out_alu_sign_ex      : std_logic_vector(0 downto 0);
+  signal out_alu_sign_width   : std_logic_vector(1 downto 0);
 
   -- Regfile signals
   signal a_data, b_data : std_logic_vector(31 downto 0);
-  --tests
+
+
   signal slow_clk : std_logic := '0';
   signal counter   : integer := 0;
   signal rst : std_logic := '0';
   
   signal alu_loadstore_offset  : std_logic_vector(31 downto 0);
-  -- PIPE REGS signals (outputs)
+  -- PIPE REGS signals 
   signal pipe_pc_out, pipe_instr_out : std_logic_vector(31 downto 0);
   signal pipe_pc_ex_in : std_logic_vector(31 downto 0);
   signal pipe_rs1_val, pipe_rs2_val, pipe_immed : std_logic_vector(31 downto 0);
@@ -92,6 +98,8 @@ architecture rtl of top is
   signal pipe_pc_jump_offset, pipe_pc_branch_offset, pipe_loadstore_offset : std_logic_vector(31 downto 0);
   signal pipe_sign_ex_mode : std_logic_vector(0 downto 0);
   signal pipe_sign_ex_width : std_logic_vector(1 downto 0);
+  signal pipe_mem_sign_ex_mode : std_logic_vector(0 downto 0);
+  signal pipe_mem_sign_ex_width : std_logic_vector(1 downto 0);
   signal pipe_mem_write : std_logic_vector(0 downto 0);
   signal pipe_mem_en : std_logic;
   signal pipe_bus_width : std_logic_vector(1 downto 0);
@@ -132,12 +140,12 @@ architecture rtl of top is
   signal mem_wb_alu_result : std_logic_vector(31 downto 0);
   signal mem_wb_load_data : std_logic_vector(31 downto 0);
   
-    -- WB stage signals
+    --WB stage signals
   signal wb_write_enable : std_logic;
   signal wb_write_reg    : std_logic_vector(4 downto 0);
   signal wb_write_data   : std_logic_vector(31 downto 0);
 
-  -- extra MEM/WB control needed by wb_stage
+ 
   signal mem_wb_result_src    : std_logic_vector(1 downto 0);
   signal mem_wb_pc_plus_4     : std_logic_vector(31 downto 0);
   signal mem_wb_sign_ex_mode  : std_logic_vector(0 downto 0);
@@ -146,8 +154,29 @@ architecture rtl of top is
   signal mem_wb_shift_result  : std_logic_vector(31 downto 0);
   
   
+  -- Forwarding unit
+  signal mem_is_store      : std_logic;
+  signal mem_is_load       : std_logic;
+  signal mem_will_write    : std_logic;
+  signal mem_reg_write_fwd : std_logic;
+  signal forward_a, forward_b   : std_logic_vector(1 downto 0);
+  signal ex_rs1_fwd, ex_rs2_fwd : std_logic_vector(31 downto 0);
+  
+  --Hazard handling (NOP instructions)
+  signal nop_rd         : std_logic_vector(4 downto 0);
+  signal nop_bus_write  : std_logic_vector(0 downto 0);
+  signal nop_bus_enable : std_logic;
+  signal nop_branch_en  : std_logic;
+  signal nop_pc_mode    : std_logic_vector(1 downto 0);
+  
+  
   --seven segment display
   signal segments : STD_LOGIC_VECTOR(6 downto 0);
+  
+  -- UART transmit
+  signal uart_send      : std_logic := '0';  -- 1-cycle pulse, one per 1 Hz step
+  signal uart_word_busy : std_logic;
+  signal tick_d         : std_logic := '0';  -- delayed tick for edge detection
 
 begin
 
@@ -189,9 +218,9 @@ begin
       clk            => clk,
       tick_1hz       => slow_clk,
       rst            => rst_sync,
-      stall_if       => '0',
-      redirect_valid => pipe_branch_taken,
-      redirect_pc    => pipe_branch_target,
+      stall_if       => stall_if,
+      redirect_valid => out_branch_taken,
+      redirect_pc    => out_branch_target,
       imem_en        => imem_en,
       imem_addr      => imem_addr,
       if_id_pc       => if_id_pc,
@@ -213,6 +242,8 @@ begin
     port map (
       rst               => rst_sync,
       instr             => imem_dout,
+      pc_in             => if_id_pc,
+      pc_out            => id_ex_pc,
       out_immed         => out_immed,
       out_reg_a         => out_reg_a,
       out_select_a      => out_select_a,
@@ -236,6 +267,21 @@ begin
       out_result_src    => out_result_src,
       out_rdest         => out_rdest
     );
+    
+    u_hazard_detection: entity work.hazard_detection_unit
+    port map (
+      clk         => clk,
+      tick_1hz    => slow_clk,
+      rst         => rst_sync,
+      id_out_reg_a              => out_reg_a,
+      id_out_reg_b              => out_reg_b,
+      ex_out_alu_dest_reg       => out_alu_dest_reg,
+      ex_out_bus_enable         => out_alu_bus_enable,
+      ex_out_bus_write          => out_alu_bus_write,
+      ex_branch_taken           => out_branch_taken,
+      stall_if => stall_if,
+      stall_id => stall_id
+     );
 
   -- Register file
     u_regfile: entity work.regfile
@@ -253,9 +299,9 @@ begin
     );
    u_exstage: entity work.ex_stage
     port map (
-        pc_in => pipe_pc_ex_in,
-        rs1_in => pipe_rs1_val,
-        rs2_in => pipe_rs2_val,
+        pc_in => pipe_pc_out,
+        rs1_in => ex_rs1_fwd,
+        rs2_in => ex_rs2_fwd,
         imm_in => pipe_immed,
         pc_mode => pipe_pc_mode,
         pc_jump_offset_in => pipe_pc_jump_offset,
@@ -281,22 +327,30 @@ begin
         out_alu_dest_reg => out_alu_dest_reg,
         branch_target => out_branch_target,
         out_loadstore_offset => out_alu_loadstore_off,
+        alu_sign_ex_in => pipe_sign_ex_mode,
+        alu_sign_width_in => pipe_sign_ex_width,
+        out_alu_sign_ex => out_alu_sign_ex,
+        out_alu_sign_width => out_alu_sign_width,
         branch_taken => out_branch_taken 
      ); 
+     nop_rd         <= "00000" when (stall_id = '1' or out_branch_taken = '1') else out_rdest;
+     nop_bus_write  <= "0"     when (stall_id = '1' or out_branch_taken = '1') else out_bus_write;
+     nop_bus_enable <= '0'     when (stall_id = '1' or out_branch_taken = '1') else out_bus_enable;
+     nop_branch_en  <= '0'     when (stall_id = '1' or out_branch_taken = '1') else out_branch_test_enable;
+     nop_pc_mode    <= "10"    when (stall_id = '1' or out_branch_taken = '1') else out_pc_mode;
     u_piperegs: entity work.pipe_regs
      port map (
       clk => clk,
       tick_1hz => slow_clk,
       rst => rst_sync,
 
-      pc => if_id_pc,
-      id_ex_pc => pipe_pc_out,
+      pc => id_ex_pc,
       instr => if_id_instr,
 
       rs1_val => a_data,
       rs2_val => b_data,
       immed => out_immed,
-      rd => out_rdest,
+      rd => nop_rd,
       rs1 => out_reg_a,
       rs2 => out_reg_b,
 
@@ -306,18 +360,21 @@ begin
       result_src => out_result_src,
       shift_mode => out_shift_mode,
 
-      pc_mode => out_pc_mode,
+      pc_mode => nop_pc_mode,
       pc_jump_offset => out_pc_jump_offset,
       pc_branch_offset => out_pc_branch_offset,
       loadstore_offset => out_loadstore_offset,
       sign_ex_mode => out_sign_ex_mode,
       sign_ex_width => out_sign_ex_width,
+      
+      alu_sign_ex_mode => out_alu_sign_ex,
+      alu_sign_ex_width => out_alu_sign_width,
 
-      mem_write => out_bus_write,
-      mem_en => out_bus_enable,
+      mem_write => nop_bus_write,
+      mem_en => nop_bus_enable,
       bus_width => out_bus_width,
 
-      branch_test_enable => out_branch_test_enable,
+      branch_test_enable => nop_branch_en,
       branch_test_mode => out_branch_test_mode,
       
       alu_result => out_alu_result,
@@ -341,7 +398,6 @@ begin
 
       -- Outputs (to EX stage)
       pc_out => pipe_pc_out,
-      pc_ex_in => pipe_pc_ex_in,
       instr_out => pipe_instr_out,
       mem_loadstore_off => pipe_mem_loadstore_off,
 
@@ -364,6 +420,9 @@ begin
       loadstore_offset_out => pipe_loadstore_offset,
       sign_ex_mode_out => pipe_sign_ex_mode,
       sign_ex_width_out => pipe_sign_ex_width,
+      
+      alu_sign_ex_mode_out => pipe_mem_sign_ex_mode,
+      alu_sign_ex_width_out => pipe_mem_sign_ex_width,
 
       mem_write_out => pipe_mem_write,
       mem_en_out => pipe_mem_en,
@@ -389,6 +448,33 @@ begin
       mem_wb_alu_result_out => pipe_mem_wb_alu_result, 
       mem_wb_load_data_out => pipe_mem_wb_load_data 
     );
+    
+    mem_is_store   <= pipe_alu_bus_write(0);
+    mem_is_load    <= '1' when (pipe_alu_result_src = "10") else '0';  
+    mem_will_write <= '1' when (pipe_alu_dest_reg /= "00000" and mem_is_store = '0')
+                  else '0';
+
+    mem_reg_write_fwd <= mem_will_write and (not mem_is_load);
+    u_forwarding: entity work.forwarding_unit
+        port map (
+        ex_rs1        => pipe_rs1,
+        ex_rs2        => pipe_rs2,
+        mem_rd        => pipe_alu_dest_reg,
+        mem_reg_write => mem_reg_write_fwd,   
+        wb_rd         => wb_write_reg,
+        wb_reg_write  => wb_write_enable,
+        forward_a     => forward_a,
+        forward_b     => forward_b
+  );
+    with forward_a select
+        ex_rs1_fwd <= pipe_alu_result when "01",   --EX/MEM forward
+                wb_write_data   when "10",   -- MEM/WB forward
+                pipe_rs1_val    when others; -- no forward (regfile read)
+
+    with forward_b select
+        ex_rs2_fwd <= pipe_alu_result when "01",
+                wb_write_data   when "10",
+                pipe_rs2_val    when others;
     u_mem_stage: entity work.mem_stage
         port map(
         clk => clk,
@@ -402,9 +488,9 @@ begin
         mem_read => pipe_alu_bus_enable,
         mem_write => pipe_alu_bus_write,
         alu_src => pipe_alu_result_src,
-        in_sign_ex_mode => pipe_sign_ex_mode,
+        in_sign_ex_mode => pipe_mem_sign_ex_mode,
         in_pc_plus_4 => pipe_pc_4,
-        in_mem_sign_width=>pipe_sign_ex_width,
+        in_mem_sign_width=>pipe_mem_sign_ex_width,
         
         dmem_read_data => dmem_read_data, 
         dmem_addr => dmem_addr, 
@@ -433,8 +519,6 @@ begin
             wea => dmem_write_en
          );
 
-    -- No separate shifter result path currently exists in top,
-    -- so use ALU result unless you expose a real shift result from EX.
     mem_wb_shift_result  <= mem_wb_alu_result;
     u_wb_stage: entity work.wb_stage
         port map (
@@ -467,10 +551,40 @@ begin
     CE <= segments(4);
     CF <= segments(5);
     CG <= segments(6);
-    DP <= '1'; -- keep decimal point off (active low)
-    LED(15 downto 6) <= imem_dout(9 downto 0);
+    DP <= '1'; --decimal point off (active low)
+    LED(15 downto 7) <= imem_dout(8 downto 0);
     LED(5 downto 1) <= pipe_dest_reg;
-    LED(0) <= pipe_branch_taken;
+    LED(0) <= stall_if;
+    LED(6) <= stall_id;
+    
+    
+    process(clk)
+    begin
+      if rising_edge(clk) then
+        if rst_sync = '0' then
+          tick_d    <= '0';
+          uart_send <= '0';
+        else
+          tick_d    <= slow_clk;
+          uart_send <= slow_clk and (not tick_d);
+        end if;
+      end if;
+    end process;
+ 
+    u_uart_word_tx: entity work.uart_word_tx
+      generic map (
+        CLK_FREQ_HZ => 100_000_000,
+        BAUD_RATE   => 115_200
+      )
+      port map (
+        clk  => clk,
+        rst  => rst_sync,
+        reg => wb_write_reg,
+        send => uart_send,
+        word => wb_write_data,
+        busy => uart_word_busy,
+        tx   => UART_RXD_OUT
+      );
 
 
 end architecture;

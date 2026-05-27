@@ -17,13 +17,13 @@ architecture rtl of ex_operand_mux is
 begin
   -- Mux A
   with a_sel select                                
-    a_out <= rs1   when "0",                      -- 00 → A = rs1
-             pc    when "1",                      -- 01 → A = pc (JAL/JALR) 
-             ZERO32 when others;                   -- 10/11 → A = 0 
+    a_out <= rs1   when "0",                      
+             pc    when "1",                     
+             ZERO32 when others;                   
 
   -- Mux B
   with b_sel select
-    b_out <= rs2   when "0",                      -- 00 → B = rs2 
-             imm   when "1",                      -- 01 → B = immediate
-             rs2   when others;                    -- non ero molto sicuro quindi ho messo rs2 
+    b_out <= rs2   when "0",                 
+             imm   when "1",                     
+             rs2   when others;                    
 end architecture;

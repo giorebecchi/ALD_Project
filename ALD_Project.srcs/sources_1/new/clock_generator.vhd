@@ -11,7 +11,7 @@ entity clock_generator is
 end entity;
 
 architecture rtl of clock_generator is
-  constant MAX_COUNT : unsigned(26 downto 0) := to_unsigned(100_000_000 - 1, 27);
+  constant MAX_COUNT : unsigned(26 downto 0) := to_unsigned(100_000 - 1, 27); --100_000_000
   signal counter     : unsigned(26 downto 0) := (others => '0');
 begin
   process(clk, reset)
@@ -22,7 +22,7 @@ begin
     elsif rising_edge(clk) then
       if counter = MAX_COUNT then
         counter  <= (others => '0');
-        tick_1hz <= '1';      -- assert for ONE clock cycle
+        tick_1hz <= '1';      -- assert for one clock cycle
       else
         counter  <= counter + 1;
         tick_1hz <= '0';

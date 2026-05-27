@@ -7,6 +7,8 @@ entity id_stage is
     port(
          rst                    : in std_logic;
          instr                  : in  STD_LOGIC_VECTOR(31 downto 0);
+         pc_in                  : in STD_LOGIC_VECTOR(31 downto 0);
+         pc_out                 : out STD_LOGIC_VECTOR(31 downto 0);
          out_immed              : out STD_LOGIC_VECTOR(31 downto 0) := (others => '0');         
 
          out_reg_a              : out STD_LOGIC_VECTOR(4 downto 0)  := (others => '0');
@@ -445,12 +447,15 @@ instr_decode: process(opcode, rd, func3, func7, immed_I, immed_S, immed_B, immed
             when others =>
               -- Undecoded for opcodes                      
          end case;
+         
          if rst = '0' then
             out_pc_mode             <= PC_RESET_STATE;
             out_branch_test_mode    <= BRANCH_TEST_TRUE;
          end if;
       end if;
    end process;
+   
+   pc_out <= pc_in;
 end architecture;
 
         
