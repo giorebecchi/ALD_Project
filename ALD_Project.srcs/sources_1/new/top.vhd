@@ -177,6 +177,16 @@ architecture rtl of top is
   signal uart_send      : std_logic := '0';  -- 1-cycle pulse, one per 1 Hz step
   signal uart_word_busy : std_logic;
   signal tick_d         : std_logic := '0';  -- delayed tick for edge detection
+  
+  -- UART output FIFO (buffers results so none are lost when stepping fast)
+  signal fifo_wr_en   : std_logic := '0';
+  signal fifo_wr_data : std_logic_vector(36 downto 0);
+  signal fifo_rd_en   : std_logic := '0';
+  signal fifo_rd_data : std_logic_vector(36 downto 0);
+  signal fifo_full    : std_logic;
+  signal fifo_empty   : std_logic;
+  signal uart_reg     : std_logic_vector(4 downto 0);
+  signal uart_word    : std_logic_vector(31 downto 0);
 
 begin
 
@@ -557,16 +567,56 @@ begin
     LED(0) <= stall_if;
     LED(6) <= stall_id;
     
-    
+    --on every edge, push reg and value into the FIFO.
+    fifo_wr_data <= wb_write_reg & wb_write_data;   -- 5 + 32 = 37 bits
+ 
     process(clk)
     begin
       if rising_edge(clk) then
         if rst_sync = '0' then
-          tick_d    <= '0';
-          uart_send <= '0';
+          tick_d     <= '0';
+          fifo_wr_en <= '0';
         else
-          tick_d    <= slow_clk;
-          uart_send <= slow_clk and (not tick_d);
+          tick_d     <= slow_clk;
+          fifo_wr_en <= slow_clk and (not tick_d);   
+        end if;
+      end if;
+    end process;
+ 
+    u_uart_fifo: entity work.uart_fifo
+      generic map (
+        DATA_WIDTH => 37,
+        DEPTH      => 512
+      )
+      port map (
+        clk     => clk,
+        rst     => rst_sync,
+        wr_en   => fifo_wr_en,
+        wr_data => fifo_wr_data,
+        rd_en   => fifo_rd_en,
+        rd_data => fifo_rd_data,
+        full    => fifo_full,
+        empty   => fifo_empty
+      );
+ 
+    --whenever the word transmitter is free and the FIFO is not
+    -- empty, present the head entry, pulse send, and pop it.
+    uart_reg  <= fifo_rd_data(36 downto 32);
+    uart_word <= fifo_rd_data(31 downto 0);
+ 
+    process(clk)
+    begin
+      if rising_edge(clk) then
+        if rst_sync = '0' then
+          uart_send  <= '0';
+          fifo_rd_en <= '0';
+        else
+          uart_send  <= '0';
+          fifo_rd_en <= '0';
+          if (uart_word_busy = '0') and (fifo_empty = '0') and (uart_send = '0') then
+            uart_send  <= '1';  
+            fifo_rd_en <= '1';   
+          end if;
         end if;
       end if;
     end process;
@@ -579,9 +629,9 @@ begin
       port map (
         clk  => clk,
         rst  => rst_sync,
-        reg => wb_write_reg,
+        reg  => uart_reg,
         send => uart_send,
-        word => wb_write_data,
+        word => uart_word,
         busy => uart_word_busy,
         tx   => UART_RXD_OUT
       );

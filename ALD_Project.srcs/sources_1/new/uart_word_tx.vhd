@@ -45,7 +45,7 @@ architecture rtl of uart_word_tx is
     if v < 10 then
       return std_logic_vector(to_unsigned(v + 48, 8));       -- '0'..'9'
     else
-      return std_logic_vector(to_unsigned(v - 55, 8));  -- 'A'..'F'
+      return std_logic_vector(to_unsigned(v + 55, 8));  -- 'A'..'F'
     end if;
   end function;
 
